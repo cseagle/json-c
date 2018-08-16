@@ -113,8 +113,8 @@
 #undef HAVE_STRNCASECMP
 #endif
 
-#cmakedefine HAVE_STRTOLL
-#cmakedefine strtoll @cmake_strtoll@
+//#cmakedefine HAVE_STRTOLL
+//#cmakedefine strtoll @cmake_strtoll@
 
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H

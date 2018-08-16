@@ -1335,7 +1335,7 @@ static int json_object_copy_serializer_data(struct json_object *src, struct json
 
 	if (dst->_to_json_string == json_object_userdata_to_json_string)
 	{
-		dst->_userdata = strdup(src->_userdata);
+		dst->_userdata = strdup((char*)src->_userdata);
 	}
 	// else if ... other supported serializers ...
 	else
