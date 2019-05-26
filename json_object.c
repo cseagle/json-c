@@ -171,7 +171,7 @@ extern struct json_object* json_object_get(struct json_object *jso)
 	if (!jso) return jso;
 
 	// Don't overflow the refcounter.
-	assert(jso->_ref_count < UINT_FAST32_MAX);
+	assert(jso->_ref_count < UINT32_MAX);
 
 #if defined(HAVE_ATOMIC_BUILTINS) && defined(ENABLE_THREADING)
 	__sync_add_and_fetch(&jso->_ref_count, 1);
@@ -395,7 +395,7 @@ static int json_object_object_to_json_string(struct json_object* jso,
 				printbuf_strappend(pb, "\n");
 		}
 		had_children = 1;
-		if (flags & JSON_C_TO_STRING_SPACED)
+		if (flags & JSON_C_TO_STRING_SPACED && !(flags & JSON_C_TO_STRING_PRETTY))
 			printbuf_strappend(pb, " ");
 		indent(pb, level+1, flags);
 		printbuf_strappend(pb, "\"");
@@ -416,7 +416,7 @@ static int json_object_object_to_json_string(struct json_object* jso,
 			printbuf_strappend(pb, "\n");
 		indent(pb,level,flags);
 	}
-	if (flags & JSON_C_TO_STRING_SPACED)
+	if (flags & JSON_C_TO_STRING_SPACED && !(flags & JSON_C_TO_STRING_PRETTY))
 		return printbuf_strappend(pb, /*{*/ " }");
 	else
 		return printbuf_strappend(pb, /*{*/ "}");
@@ -951,7 +951,10 @@ double json_object_get_double(const struct json_object *jso)
 
     /* if conversion stopped at the first character, return 0.0 */
     if (errPtr == get_string_component(jso))
-        return 0.0;
+    {
+      errno = EINVAL;
+      return 0.0;
+    }
 
     /*
      * Check that the conversion terminated on something sensible
@@ -959,7 +962,10 @@ double json_object_get_double(const struct json_object *jso)
      * For example, { "pay" : 123AB } would parse as 123.
      */
     if (*errPtr != '\0')
-        return 0.0;
+    {
+      errno = EINVAL;
+      return 0.0;
+    }
 
     /*
      * If strtod encounters a string which would exceed the
@@ -977,6 +983,7 @@ double json_object_get_double(const struct json_object *jso)
             cdouble = 0.0;
     return cdouble;
   default:
+    errno = EINVAL;
     return 0.0;
   }
 }
@@ -1030,7 +1037,7 @@ struct json_object* json_object_new_string(const char *s)
 	return jso;
 }
 
-struct json_object* json_object_new_string_len(const char *s, int len)
+struct json_object* json_object_new_string_len(const char *s, const int len)
 {
 	char *dstbuf;
 	struct json_object *jso = json_object_new(json_type_string);
@@ -1127,7 +1134,7 @@ static int json_object_array_to_json_string(struct json_object* jso,
 				printbuf_strappend(pb, "\n");
 		}
 		had_children = 1;
-		if (flags & JSON_C_TO_STRING_SPACED)
+		if (flags & JSON_C_TO_STRING_SPACED && !(flags&JSON_C_TO_STRING_PRETTY))
 			printbuf_strappend(pb, " ");
 		indent(pb, level + 1, flags);
 		val = json_object_array_get_idx(jso, ii);
@@ -1144,7 +1151,7 @@ static int json_object_array_to_json_string(struct json_object* jso,
 		indent(pb,level,flags);
 	}
 
-	if (flags & JSON_C_TO_STRING_SPACED)
+	if (flags & JSON_C_TO_STRING_SPACED && !(flags&JSON_C_TO_STRING_PRETTY))
 		return printbuf_strappend(pb, " ]");
 	return printbuf_strappend(pb, "]");
 }
@@ -1335,7 +1342,7 @@ static int json_object_copy_serializer_data(struct json_object *src, struct json
 
 	if (dst->_to_json_string == json_object_userdata_to_json_string)
 	{
-		dst->_userdata = strdup((char*)src->_userdata);
+		dst->_userdata = strdup(src->_userdata);
 	}
 	// else if ... other supported serializers ...
 	else
